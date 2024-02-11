@@ -1,0 +1,174 @@
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+    
+
+    <div id="result"> </div>
+    <div id="running"> </div>
+    <br>
+    <div id="top_10_view"> </div>
+    <div id="top_10_like"> </div>
+
+
+    <script>
+        tag = "vuitetcotruyen"
+        list_tags = ["vuitetcotruyen", "vietnamoi"]
+        start_key = ""
+        contents_count = 0
+        channels_count = 0
+        types_count = 0
+        list_ids = new Map()
+        list_ids2 = []
+        list_cids = []
+        top_view_id = { id: "0" }
+        top_like_id = { id: "0" }
+        videos_count = 0
+        shorts_count = 0
+        posts_count = 0
+        articles_count = 0
+
+        top_10_view = []
+        top_10_like = []
+
+
+        async function tet(size) {
+            res = await fetch("https://gw.ganjingworld.com/v1.0c/hashtag/get-contents?hashtag=%23"+tag+"&type=all&page_size=" + size + "&start_key=" + start_key + "&query=basic,view,like&hide_by_owner=true&lang=en-US", {
+                "headers": {
+                    "Accept": "application/json, text/plain, */*",
+                    "Accept-Language": "en-US,en;q=0.5",
+                    "Sec-Fetch-Mode": "cors",
+                },
+                "method": "GET",
+                "mode": "cors"
+            });
+
+            data = await res.json()
+            start_key = data.data.start_key
+            list_contents = data.data.list
+            // console.log(start_key)
+            // console.log(list_contents)
+            if (!list_contents) {
+                return ""
+            } 
+
+            for (item of list_contents) {
+                ob_id = {
+                    id: item.id,
+                    title: item.title,
+                    view: item.view_count,
+                    like: item.like_count,
+                    type: item.type
+                }
+                
+                //console.log("view", item.view_count, "like", item.like_count)
+                if (list_ids.has(top_view_id.id)) {
+                    o_view = list_ids.get(top_view_id.id).view
+                    if (o_view < item.view_count) {
+                        top_view_id = ob_id
+                    }
+                } else {
+                    top_view_id = ob_id
+                }
+                if (list_ids.has(top_like_id.id)) {
+                    o_like = list_ids.get(top_like_id.id).like
+                    if (o_like < item.like_count) {
+                        top_like_id = ob_id
+                    }
+                } else {
+                    top_like_id = ob_id
+                }
+
+                if (!list_ids.has(item.id)) {
+                    list_ids.set(item.id, ob_id)
+                    list_ids2.push(ob_id)
+                    //console.log(item.type)
+                    switch (item.type) {
+                        case "Video":
+                            videos_count++
+                            break
+                        case "Shorts":
+                            shorts_count++
+                            break
+                        case "Post":
+                            posts_count++
+                            break
+                        case "News":
+                            articles_count++
+                            break
+                        
+                    }
+                }
+                cid = item.channel.id
+                if (!list_cids.includes(cid)) {
+                    list_cids.push(cid)
+                }
+
+                
+            }
+
+            // console.log("check id", list_ids.get(top_view_id.id))
+            // console.log(list_ids)
+            // console.log(list_ids.size)
+            //console.log(list_cids)
+
+
+
+            html = "contents: " + list_ids.size + "<br>"
+                + "channels: " + list_cids.length + "<br>"
+                + "videos: " + videos_count + "<br>"
+                + "shorts: " + shorts_count + "<br>"
+                + "posts: " + posts_count + "<br>"
+                + "articles: " + articles_count + "<br>"
+
+            document.getElementById("result").innerHTML = html
+            return start_key
+        }
+
+        async function run() {
+            tag = list_tags[0]
+            document.getElementById("running").innerHTML = "running tag: "+ tag
+            list_tags.shift()
+            for (i = 0; i < 2000; i++) {
+                end = await tet(24)
+                console.log(i, end, list_tags)
+                if (end == "" && list_tags.length) {
+                    
+                    start_key = ""
+                    tag = list_tags[0]
+                    list_tags.shift()
+                    document.getElementById("running").innerHTML = "running tag: "+ tag
+                } else if (end == "" && list_tags.length==0) {
+
+                    document.getElementById("running").innerHTML = "running done!"
+                    break
+                }
+            }
+            list_ids2.sort(function(a,b){
+                return b.view - a.view;
+            })
+            //console.log(list_ids2)
+            // + "top 10 view: " + JSON.stringify(top_10_view) + "<br>"
+            //     + "top 10 like: " + JSON.stringify(top_10_like) + "<br>"
+            html = "top view:<br/><table>"
+                + "<tr><th>S</th><th>ID</th><th>Title</th><th>View</th><th>Like</th><th>Type</th></tr>"
+            max = 1
+            for (item of list_ids2) {
+                html += "<tr><td>"+max+"</td><td><a href=\"https://www.ganjingworld.com/" + item.type.toLowerCase() +"/"+ item.id + "\">"+item.id +"</a></td><td>" + item.title.substring(0, 100) + "</td><td>" + item.view + "</td><td>" + item.like + "</td><td>" + item.type + "</td></tr>"
+
+                max++
+                // if (max>=200) {
+                //     break
+                // }
+            }
+            document.getElementById("top_10_view").innerHTML = html + "</table>"
+        }
+
+        run()
+
+
+    </script>
+
+
+</body>
